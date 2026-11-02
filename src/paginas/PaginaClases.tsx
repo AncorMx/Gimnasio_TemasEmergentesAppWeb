@@ -35,10 +35,12 @@ export function PaginaClases() {
             to={`/clases/${clase.id}`}
             className="tarjeta-clase"
           >
+            {/* loading="lazy" difiere la descarga hasta que la imagen entra al viewport */}
             <img
               className="tarjeta-clase__imagen"
               src={urlImagen(clase.imagen)}
               alt={clase.nombre}
+              loading="lazy"
             />
 
             <div className="tarjeta-clase__cuerpo">

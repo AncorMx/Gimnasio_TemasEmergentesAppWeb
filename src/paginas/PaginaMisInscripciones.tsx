@@ -1,14 +1,18 @@
 import { Link } from 'react-router';
 import { Cargando } from '../componentes/Cargando.tsx';
 import { MensajeError } from '../componentes/MensajeError.tsx';
-import { useMisInscripciones } from '../hooks/useMisInscripciones.ts';
 import { urlImagen } from '../servicios/api.ts';
+import { useInscripcionesStore } from '../store/inscripciones.ts';
 
 export function PaginaMisInscripciones() {
-  const { inscripciones, cargando, error, reintentar } = useMisInscripciones();
+  // Lee directamente del store en lugar de hacer un fetch propio
+  const inscripciones = useInscripcionesStore((s) => s.inscripciones);
+  const cargando      = useInscripcionesStore((s) => s.cargando);
+  const error         = useInscripcionesStore((s) => s.error);
+  const cargar        = useInscripcionesStore((s) => s.cargar);
 
   if (cargando) return <Cargando />;
-  if (error) return <MensajeError mensaje={error} onReintentar={reintentar} />;
+  if (error) return <MensajeError mensaje={error} onReintentar={cargar} />;
 
   return (
     <>

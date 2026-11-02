@@ -8,6 +8,7 @@ import {
 import type { Sesion } from '../tipos.ts';
 import { entrar as entrarApi, registrar as registrarApi } from '../servicios/sesion.ts';
 import { EVENTO_SESION_TERMINADA } from '../servicios/api.ts';
+import { useInscripcionesStore } from '../store/inscripciones.ts';
 
 const CLAVE_SESION = 'gimnasio.sesion';
 
@@ -35,9 +36,22 @@ function leerSesion(): Sesion | null {
 export function SesionProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion);
 
+  // Acciones del store de inscripciones
+  const cargarInscripciones = useInscripcionesStore((s) => s.cargar);
+  const vaciarInscripciones = useInscripcionesStore((s) => s.vaciar);
+
+  // Si ya hay sesión guardada al montar, cargar las inscripciones del usuario
+  useEffect(() => {
+    if (sesion) {
+      void cargarInscripciones();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     function cerrarSesion() {
       setSesion(null);
+      vaciarInscripciones();
     }
 
     window.addEventListener(EVENTO_SESION_TERMINADA, cerrarSesion);
@@ -45,7 +59,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener(EVENTO_SESION_TERMINADA, cerrarSesion);
     };
-  }, []);
+  }, [vaciarInscripciones]);
 
   function guardar(nuevaSesion: Sesion) {
     localStorage.setItem(CLAVE_SESION, JSON.stringify(nuevaSesion));
@@ -53,16 +67,23 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }
 
   async function entrar(correo: string, password: string) {
-    guardar(await entrarApi(correo, password));
+    const nuevaSesion = await entrarApi(correo, password);
+    guardar(nuevaSesion);
+    // Cargar las inscripciones del usuario recién autenticado
+    await cargarInscripciones();
   }
 
   async function registrar(nombre: string, correo: string, password: string) {
-    guardar(await registrarApi(nombre, correo, password));
+    const nuevaSesion = await registrarApi(nombre, correo, password);
+    guardar(nuevaSesion);
+    // El usuario recién registrado no tendrá inscripciones, pero se carga igual
+    await cargarInscripciones();
   }
 
   function salir() {
     localStorage.removeItem(CLAVE_SESION);
     setSesion(null);
+    vaciarInscripciones();
   }
 
   return (

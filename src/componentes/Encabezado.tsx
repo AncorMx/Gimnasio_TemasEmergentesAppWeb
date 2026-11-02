@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router';
 import { useSesion } from '../sesion/SesionContext.tsx';
+import { useInscripcionesStore } from '../store/inscripciones.ts';
 
 function claseEnlace({ isActive }: { isActive: boolean }) {
   return isActive ? 'barra__enlace barra__enlace--activo' : 'barra__enlace';
@@ -7,6 +8,8 @@ function claseEnlace({ isActive }: { isActive: boolean }) {
 
 export function Encabezado() {
   const { sesion, salir } = useSesion();
+  const inscripciones = useInscripcionesStore((s) => s.inscripciones);
+  const total = inscripciones.length;
 
   return (
     <header className="barra">
@@ -24,6 +27,10 @@ export function Encabezado() {
             <li>
               <NavLink to="/mis-inscripciones" className={claseEnlace}>
                 Mis inscripciones
+                {/* Mostrar el contador solo cuando hay sesión activa */}
+                {sesion && total > 0 && (
+                  <span className="barra__contador"> ({total})</span>
+                )}
               </NavLink>
             </li>
           </ul>
