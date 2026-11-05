@@ -1,0 +1,56 @@
+<header class="barra">
+  <div class="barra__interior">
+    <div class="barra__marca">
+      <img src="/logo.svg" alt="Logo Gimnasio Titanes" />
+      <span>Gimnasio Titanes</span>
+    </div>
+
+    <span class="barra__etiqueta">Administración</span>
+  </div>
+</header>
+
+<main class="pagina">
+  <section class="encabezado">
+    <div>
+      <h1>Tablero de clases</h1>
+      <p>Resumen del catálogo local del gimnasio.</p>
+    </div>
+
+    <div class="acciones">
+      <button class="boton boton--secundario" type="button" (click)="vaciarCatalogo()">
+        Vaciar catálogo
+      </button>
+
+      <button class="boton" type="button" (click)="restaurarCatalogo()">
+        Restaurar catálogo
+      </button>
+    </div>
+  </section>
+
+  <section class="resumen">
+    <div class="resumen__dato">
+      <span class="resumen__numero">{{ totalClases }}</span>
+      <span class="resumen__texto">clases</span>
+    </div>
+
+    <div class="resumen__dato">
+      <span class="resumen__numero">{{ minutosSemana }}</span>
+      <span class="resumen__texto">minutos a la semana</span>
+    </div>
+
+    <div class="resumen__dato">
+      <span class="resumen__numero">{{ clasesLargas }}</span>
+      <span class="resumen__texto">clases de 60 min o más</span>
+    </div>
+  </section>
+
+  <section class="rejilla">
+    @for (clase of clases; track clase.id) {
+      <app-tarjeta-clase [clase]="clase" />
+    } @empty {
+      <div class="tarjeta vacio">
+        No hay clases para mostrar.
+      </div>
+    }
+  </section>
+</main>
