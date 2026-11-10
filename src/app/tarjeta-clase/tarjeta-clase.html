@@ -1,4 +1,8 @@
-<article class="tarjeta-clase">
+<article
+  class="tarjeta-clase"
+  [class.tarjeta-clase--activa]="activa()"
+  (click)="alSeleccionar()"
+>
   <img [src]="clase().imagen" [alt]="clase().nombre" />
 
   <div class="tarjeta-clase__cuerpo">

@@ -1,0 +1,19 @@
+<div class="filtro">
+  <button
+    type="button"
+    [class.activo]="catalogo.categoriaElegida() === 'todas'"
+    (click)="seleccionar('todas')"
+  >
+    Todas
+  </button>
+
+  @for (cat of categorias; track cat) {
+    <button
+      type="button"
+      [class.activo]="catalogo.categoriaElegida() === cat"
+      (click)="seleccionar(cat)"
+    >
+      {{ cat }}
+    </button>
+  }
+</div>

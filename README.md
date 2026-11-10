@@ -1,34 +1,46 @@
-# Práctica 19 - Panel del gimnasio en Angular
+# Práctica 20 - Signals, servicios y comunicación entre componentes
 
-En esta práctica armé el panel de administración del gimnasio usando Angular con componentes standalone, señales y el nuevo flujo de control en las plantillas.
+En esta práctica migré el estado que estaba en el componente principal hacia un servicio (`Catalogo`) usando signals de Angular. También agregué el filtro por categorías, la selección de tarjeta con panel de detalle y la comunicación entre componentes con `input()` y `output()`.
 
-## Resumen del tablero
-El tablero carga 8 clases locales y muestra:
-- Total de clases (8)
-- Minutos acumulados por semana (380 min)
-- Clases que duran 60 min o más (2)
+---
 
-Cada tarjeta muestra su foto, título, descripción, categoría y tiempo de duración (con la etiqueta `Larga` si dura 60 min o más). También agregué los botones para vaciar el catálogo y volverlo a restaurar. Si se queda sin clases, aparece el mensaje avisando que no hay nada para mostrar.
+## Lo que se implementó
+
+### 1. Servicio del catálogo (`src/app/catalogo.ts`)
+Centraliza el estado del catálogo en signals:
+- `clases`: signal con la lista de clases disponibles.
+- `categoriaElegida`: signal con el filtro actual (`'todas'`, `'fuerza'`, `'cardio'`, `'flexibilidad'`).
+- `claseSeleccionada`: signal con la clase seleccionada (o `null` si ninguna está activa).
+- `clasesVisibles`: `computed` que filtra las clases según la categoría elegida.
+- `minutosTotales`: `computed` que suma los minutos de las clases visibles.
+- `clasesLargas`: `computed` con la cantidad de clases de 60 minutos o más.
+
+Al cambiar el filtro, si la clase seleccionada ya no pertenece a la categoría activa, se deselecciona automáticamente para cerrar el detalle.
+
+### 2. Filtro por categoría (`filtro-categoria`)
+Componente que inyecta el servicio con `inject(Catalogo)` y muestra los botones de categorías. Al hacer clic en un botón, cambia la categoría en el servicio y todo el tablero se actualiza de inmediato.
+
+### 3. Tarjeta y panel lateral
+- `TarjetaClase` ahora recibe un `input()` booleano `activa` para resaltar el borde cuando está seleccionada.
+- Emite un `output()` `elegida` con la clase al hacer clic.
+- El tablero (`app.html`) muestra a la derecha un panel lateral (`aside.lateral`) con la foto, categoría, nombre, descripción y duración de la clase elegida.
 
 ---
 
 ## Preguntas de la práctica
 
-### ¿Qué archivo de Angular hace el papel de main.tsx, de App.tsx y de vite.config.ts?
-- **`main.tsx` equivale a `src/main.ts`:** Es el archivo de entrada donde arranca la aplicación (`bootstrapApplication`).
-- **`App.tsx` equivale a `src/app/app.ts` y `app.html`:** En Angular la lógica del componente principal va en el `.ts` y la vista en el `.html`.
-- **`vite.config.ts` equivale a `angular.json`:** Aquí se define la configuración general del proyecto, assets, estilos globales y opciones de compilación.
+### ¿Qué diferencia hay entre un signal y un computed, y cuál se parece a useState y cuál a useMemo?
+- **`signal`** guarda un valor de estado que podemos leer y modificar con `.set()` o `.update()`. Equivale al **`useState`** de React.
+- **`computed`** es un valor derivado de solo lectura que se calcula a partir de otros signals. Angular rastrea sus dependencias y solo vuelve a calcularlo cuando alguno de esos signals cambia. Equivale al **`useMemo`** de React.
 
-### ¿Por qué clase() lleva paréntesis?
-Porque al definirlo con `input.required()`, Angular crea un **signal input**. Las señales en Angular funcionan como funciones, así que para leer su valor actual se tienen que mandar llamar con paréntesis: `clase().nombre`.
+### ¿Qué pasa si el filtro hace `new Catalogo()` en lugar de `inject(Catalogo)`?
+Si se usa `new Catalogo()`, se crearía una instancia separada e independiente del servicio, por lo que el filtro modificaría su propia copia del estado y el tablero nunca se enteraría de los cambios (no se filtrarían las tarjetas ni se actualizaría el resumen).
 
-### ¿Para qué sirve track?
-En `@for (clase of clases; track clase.id)`, el `track` le dice a Angular cómo identificar de forma única a cada elemento (usando su `id`). Así, cuando la lista cambia, Angular solo actualiza o mueve el elemento que cambió en vez de volver a renderizar todo el DOM.
+Con `inject(Catalogo)`, Angular entrega la misma instancia del servicio compartida a nivel de aplicación (`providedIn: 'root'`), logrando que todos los componentes lean y modifiquen la misma fuente de datos.
 
 ---
 
-## Errores probados (evidencias)
-- **`NG5002`:** Error de sintaxis en el control de flujo. Ocurrió al escribir mal la estructura del `@for` en el template.
-- **`NG8001`:** Error de componente no reconocido (`'app-tarjeta-clase' is not a known element`). Pasó al poner la etiqueta en el HTML sin haber importado `TarjetaClase` en el array `imports` de `app.ts`.
-
-*(Las capturas de ambos errores y del tablero se encuentran en la carpeta `evidencias/`)*.
+## Evidencias
+1. **Filtro en Cardio con su resumen**: Muestra las clases filtradas por la categoría Cardio y las estadísticas actualizadas.
+2. **Clase elegida con su detalle**: Muestra la tarjeta con borde activo y el panel lateral con la información de la clase.
+3. **Aviso provocado (NG8109)**: Captura de consola al intentar llamar a `inject()` fuera del contexto de inyección.
