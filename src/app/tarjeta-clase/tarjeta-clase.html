@@ -3,7 +3,7 @@
   [class.tarjeta-clase--activa]="activa()"
   (click)="alSeleccionar()"
 >
-  <img [src]="clase().imagen" [alt]="clase().nombre" />
+  <img [src]="imagenUrl()" [alt]="clase().nombre" />
 
   <div class="tarjeta-clase__cuerpo">
     <span class="etiqueta" [class]="'etiqueta etiqueta--' + clase().categoria">

@@ -1,0 +1,77 @@
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Clases</h1>
+      <p>Catálogo de clases del gimnasio.</p>
+    </div>
+
+    <a class="boton" routerLink="/clases/nueva">+ Nueva clase</a>
+  </div>
+
+  @if (catalogo.cargando()) {
+    <p class="cargando">Cargando clases...</p>
+  } @else if (catalogo.mensajeError()) {
+    <div class="aviso aviso--error">
+      <p>{{ catalogo.mensajeError() }}</p>
+      <button class="boton boton--secundario" type="button" (click)="catalogo.reintentar()">
+        Reintentar
+      </button>
+    </div>
+  } @else {
+    <app-filtro-categoria />
+
+    <section class="resumen">
+      <div class="resumen__dato">
+        <span class="resumen__numero">{{ catalogo.clasesVisibles().length }}</span>
+        <span class="resumen__texto">clases visibles</span>
+      </div>
+      <div class="resumen__dato">
+        <span class="resumen__numero">{{ catalogo.minutosTotales() }}</span>
+        <span class="resumen__texto">minutos del filtro</span>
+      </div>
+      <div class="resumen__dato">
+        <span class="resumen__numero">{{ catalogo.clasesLargas() }}</span>
+        <span class="resumen__texto">clases de 60 min o más</span>
+      </div>
+    </section>
+
+    <div class="tablero">
+      <section>
+        @if (catalogo.clasesVisibles().length > 0) {
+          <div class="rejilla">
+            @for (clase of catalogo.clasesVisibles(); track clase.id) {
+              <app-tarjeta-clase
+                [clase]="clase"
+                [activa]="catalogo.claseSeleccionada()?.id === clase.id"
+                (elegida)="catalogo.seleccionarClase($event)"
+              />
+            }
+          </div>
+        } @else {
+          <div class="tarjeta vacio">No hay clases para mostrar.</div>
+        }
+      </section>
+
+      @if (catalogo.claseSeleccionada(); as clase) {
+        <aside class="tarjeta lateral">
+          <img [src]="clase.imagen" [alt]="clase.nombre" />
+          <h2>{{ clase.nombre }}</h2>
+          <p>{{ clase.descripcion }}</p>
+          <p class="dato">
+            <span class="dato__clave">Categoría:</span>
+            <span class="dato__valor">{{ clase.categoria }}</span>
+          </p>
+          <p class="dato">
+            <span class="dato__clave">Duración:</span>
+            <span class="dato__valor">{{ clase.duracionMin }} min</span>
+          </p>
+          <p class="dato">
+            <span class="dato__clave">ID:</span>
+            <span class="dato__valor">{{ clase.id }}</span>
+          </p>
+        </aside>
+      }
+    </div>
+  }
+</main>
+
