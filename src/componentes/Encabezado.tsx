@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router';
 import { useSesion } from '../sesion/SesionContext.tsx';
 import { useInscripcionesStore } from '../store/inscripciones.ts';
+import { useInstalar } from '../hooks/useInstalar.ts';
 
 function claseEnlace({ isActive }: { isActive: boolean }) {
   return isActive ? 'barra__enlace barra__enlace--activo' : 'barra__enlace';
@@ -10,6 +11,7 @@ export function Encabezado() {
   const { sesion, salir } = useSesion();
   const inscripciones = useInscripcionesStore((s) => s.inscripciones);
   const total = inscripciones.length;
+  const { puedeInstalar, instalar } = useInstalar();
 
   return (
     <header className="barra">
@@ -37,6 +39,15 @@ export function Encabezado() {
         </nav>
 
         <div className="barra__sesion">
+          {puedeInstalar && (
+            <button
+              type="button"
+              className="boton boton--secundario boton--chico"
+              onClick={() => void instalar()}
+            >
+              Instalar app
+            </button>
+          )}
           {sesion ? (
             <>
               <span className="barra__usuario">{sesion.usuario.nombre}</span>

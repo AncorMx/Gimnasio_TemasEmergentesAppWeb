@@ -1,53 +1,71 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { useParams, Link } from 'react-router';
+import { useClase } from '../hooks/useClase.ts';
 import { Cargando } from '../componentes/Cargando.tsx';
 import { MensajeError } from '../componentes/MensajeError.tsx';
-import { useClase } from '../hooks/useClase.ts';
 import { useSesion } from '../sesion/SesionContext.tsx';
 import { inscribirse } from '../servicios/gimnasio.ts';
-import { mensajeDeError, urlImagen } from '../servicios/api.ts';
+import { mensajeDeError } from '../servicios/api.ts';
 import { useInscripcionesStore } from '../store/inscripciones.ts';
 
 export function PaginaClase() {
-  const { id } = useParams();
-  const navegar = useNavigate();
-  const ubicacion = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const idNumero = id ? Number(id) : NaN;
+  const { clase, cargando, error, reintentar } = useClase(idNumero);
   const { sesion } = useSesion();
-  const idClase = Number(id);
-  const { clase, cargando, error, reintentar } = useClase(idClase);
-  const [aviso, setAviso] = useState<string | null>(null);
-  const [errorInscripcion, setErrorInscripcion] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState<number | null>(null);
 
-  // IDs de horarios en los que el usuario ya está inscrito (leídos del store)
+  // Obtenemos del store la lista de inscripciones y la función para recargarlas
   const inscripciones = useInscripcionesStore((s) => s.inscripciones);
   const cargarInscripciones = useInscripcionesStore((s) => s.cargar);
-  const idsInscritos = new Set(inscripciones.map((i) => i.horario.id));
 
-  async function inscribir(horarioId: number) {
-    if (!sesion) {
-      navegar('/entrar', {
-        state: { desde: ubicacion.pathname },
-      });
-      return;
-    }
+  const [inscribiendo, setInscribiendo] = useState<number | null>(null);
+  const [errorInscripcion, setErrorInscripcion] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
-    setAviso(null);
+  async function handleInscribirse(horarioId: number) {
+    if (!sesion) return;
     setErrorInscripcion(null);
-    setEnviando(horarioId);
+    setAviso(null);
+    setInscribiendo(horarioId);
 
     try {
       await inscribirse(horarioId);
-      setAviso('Inscripción realizada correctamente.');
-      // Actualizar la clase (lugares disponibles) y el store de inscripciones
-      reintentar();
+      // Recargar inscripciones en el store global tras inscribirse
       await cargarInscripciones();
+      setAviso('Inscripción realizada correctamente.');
+      navigator.vibrate?.(80);
+      reintentar();
     } catch (e) {
       setErrorInscripcion(
-        mensajeDeError(e, 'No se pudo realizar la inscripción.'),
+        mensajeDeError(e, 'No se pudo realizar la inscripción. Intenta de nuevo.')
       );
     } finally {
-      setEnviando(null);
+      setInscribiendo(null);
+    }
+  }
+
+  async function compartir() {
+    if (!clase) return;
+    const datos = {
+      title: clase.nombre,
+      text: `${clase.nombre} en Gimnasio Titanes · ${clase.duracionMin} min`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(datos);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(datos.url);
+      setAviso('Enlace copiado. Pégalo donde quieras compartirlo.');
+    } catch {
+      setErrorInscripcion('No se pudo copiar el enlace. Puedes copiarlo desde la barra de direcciones.');
     }
   }
 
@@ -56,69 +74,88 @@ export function PaginaClase() {
   if (!clase) return null;
 
   return (
-    <>
-      <Link to="/clases" className="detalle__volver">
+    <div className="pagina">
+      <Link to="/clases" className="enlace-volver">
         ← Todas las clases
       </Link>
 
-      {aviso && <p className="aviso aviso--exito">{aviso}</p>}
+      {aviso && <div className="aviso aviso--exito">{aviso}</div>}
       {errorInscripcion && (
-        <p className="aviso aviso--error">{errorInscripcion}</p>
+        <div className="aviso aviso--error">{errorInscripcion}</div>
       )}
 
-      <article className="detalle">
-        <img
-          className="detalle__imagen"
-          src={urlImagen(clase.imagen)}
-          alt={clase.nombre}
-        />
+      <div className="detalle-clase">
+        <div className="detalle-clase__ilustracion">
+          <img src={clase.imagen} alt="" />
+        </div>
 
-        <div className="detalle__datos">
-          <span className={`etiqueta etiqueta--${clase.categoria}`}>
-            {clase.categoria}
-          </span>
-
+        <div className="detalle-clase__info">
+          <span className="etiqueta-categoria">{clase.categoria}</span>
           <h1>{clase.nombre}</h1>
           <p className="pagina__bajada">
             {clase.descripcion} · {clase.duracionMin} min
           </p>
+          <p>
+            <button
+              type="button"
+              className="boton boton--secundario boton--chico"
+              onClick={() => void compartir()}
+            >
+              Compartir
+            </button>
+          </p>
 
           <h2>Horarios</h2>
           <ul className="horarios">
-            {clase.horarios.map((horario) => {
-              const yaInscrito = idsInscritos.has(horario.id);
+            {clase.horarios.map((h) => {
+              const cupoLleno = h.disponibles === 0;
+              // Verificar si ya está inscrito en este horario leyendo del store
+              const yaInscrito = inscripciones.some((i) => i.horario.id === h.id);
 
               return (
-                <li className="horario" key={horario.id}>
-                  <div>
-                    <div className="horario__dia">
-                      {horario.dia} · {horario.horaInicio}
-                    </div>
-                    <div className="horario__meta">
-                      {horario.entrenador} · {horario.disponibles} de{' '}
-                      {horario.cupoMaximo} lugares
-                    </div>
+                <li key={h.id} className="horarios__item">
+                  <div className="horarios__datos">
+                    <strong>
+                      {h.dia} · {h.horaInicio}
+                    </strong>
+                    <span>
+                      {h.entrenador} · {h.disponibles} de {h.cupoMaximo} lugares
+                    </span>
                   </div>
 
-                  {yaInscrito ? (
-                    <span className="horario__lleno">✓ Inscrito</span>
-                  ) : horario.disponibles === 0 ? (
-                    <span className="horario__lleno">Lleno</span>
-                  ) : (
-                    <button
-                      className="boton boton--chico"
-                      disabled={enviando === horario.id}
-                      onClick={() => void inscribir(horario.id)}
-                    >
-                      {enviando === horario.id ? 'Inscribiendo…' : 'Inscribirme'}
-                    </button>
-                  )}
+                  <div className="horarios__accion">
+                    {sesion ? (
+                      yaInscrito ? (
+                        <span className="etiqueta-inscrito">✓ Inscrito</span>
+                      ) : cupoLleno ? (
+                        <span className="etiqueta-lleno">Lleno</span>
+                      ) : (
+                        <button
+                          className="boton boton--chico"
+                          disabled={inscribiendo === h.id}
+                          onClick={() => handleInscribirse(h.id)}
+                        >
+                          {inscribiendo === h.id ? 'Inscribiendo...' : 'Inscribirme'}
+                        </button>
+                      )
+                    ) : cupoLleno ? (
+                      <span className="etiqueta-lleno">Lleno</span>
+                    ) : (
+                      <Link
+                        to="/entrar"
+                        state={{ volverA: `/clases/${clase.id}` }}
+                        className="boton boton--chico boton--secundario"
+                      >
+                        Inicia sesión para inscribirte
+                      </Link>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
         </div>
-      </article>
-    </>
+      </div>
+    </div>
   );
 }
